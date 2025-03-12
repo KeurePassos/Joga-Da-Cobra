@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jogo da Cobrinha</title>
+    <style>
+        body {
+            text-align: center;
+            background-color: #1e1e1e;
+            color: #FFD700;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            font-size: 40px;
+        }
+        table {
+            border-collapse: collapse;
+            margin: auto;
+            border: 3px solid #FFD700;
+        }
+        td {
+            border: 2px solid #444;
+            width: 35px;
+            height: 35px;
+            text-align: center;
+            font-size: 25px;
+        }
+        .apple {
+            font-size: 25px;
+        }
+
+        /* Estilo do Popup de Fim de Jogo */
+        #popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #333;
+            color: #FFD700;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+            font-size: 18px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #popup button {
+            background-color: #FFD700;
+            color: #1e1e1e;
+            border: none;
+            padding: 10px;
+            margin-top: 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        #popup button:hover {
+            background-color: #b29c00;
+        }
+    </style>
+</head>
+<body onkeydown="mudarDirecao(event.keyCode);">
+    <h1>🐍 Jogo da Cobrinha</h1>
+    <div style="text-align: center; font-size: 20px; font-weight: bolder;"> *Não bata nas paredes<br>*Aperte F5 para jogar novamente<br>*Use as setas do teclado para jogar</div>
+    <div id="main"></div>
+
+    <!-- Popup de Fim de Jogo -->
+    <div id="popup">
+        <div id="mensagemPopup"></div>
+        <button onclick="reiniciarJogo()">Jogar Novamente</button>
+    </div>
+
+    <script>
+        const tamanho = 10;
+        let cobra = [{ x: 5, y: 5 }];
+        let direcao = "direita";
+        let maca = gerarMaca();
+        let jogoAtivo = true;
+
+        function criarTabuleiro() {
+            let tabuleiroHTML = "<table>";
+            for (let x = 0; x < tamanho; x++) {
+                tabuleiroHTML += "<tr>";
+                for (let y = 0; y < tamanho; y++) {
+                    tabuleiroHTML += `<td id='td_${x}_${y}'></td>`;
+                }
+                tabuleiroHTML += "</tr>";
+            }
+            tabuleiroHTML += "</table>";
+            document.getElementById("main").innerHTML = tabuleiroHTML;
+        }
+
+        function desenharCobra() {
+            document.querySelectorAll("td").forEach(td => td.innerHTML = ""); // Limpa a tela
+
+            // Desenha a maçã
+            document.getElementById(`td_${maca.x}_${maca.y}`).innerHTML = "🍎";
+
+            // Desenha o corpo da cobra (todas as partes, exceto a cabeça)
+            for (let i = 1; i < cobra.length; i++) {
+                document.getElementById(`td_${cobra[i].x}_${cobra[i].y}`).innerHTML = "🟩"; // Corpo
+            }
+
+            // Desenha a cabeça da cobra com base na direção
+            let cabeca = cobra[0];
+            let iconeCabeca = {
+                "cima": "🟩",
+                "baixo": "🟩",
+                "esquerda": "🟩",
+                "direita": "🟩"
+            };
+            document.getElementById(`td_${cabeca.x}_${cabeca.y}`).innerHTML = iconeCabeca[direcao];
+        }
+
+        function gerarMaca() {
+            let novaMaca;
+            do {
+                novaMaca = {
+                    x: Math.floor(Math.random() * tamanho),
+                    y: Math.floor(Math.random() * tamanho)
+                };
+            } while (cobra.some(p => p.x === novaMaca.x && p.y === novaMaca.y));
+            return novaMaca;
+        }
+
+        function moverCobra() {
+            if (!jogoAtivo) return;
+
+            let novaCabeca = { ...cobra[0] };
+
+            if (direcao === "cima") novaCabeca.x--;
+            if (direcao === "baixo") novaCabeca.x++;
+            if (direcao === "esquerda") novaCabeca.y--;
+            if (direcao === "direita") novaCabeca.y++;
+
+            // Checa colisão com paredes
+            if (novaCabeca.x < 0 || novaCabeca.x >= tamanho || novaCabeca.y < 0 || novaCabeca.y >= tamanho) {
+                mostrarPopup(`☠️ Você bateu na parede! Fim de jogo.\nPontuação: ${cobra.length - 1}`);
+                jogoAtivo = false;
+                return;
+            }
+
+            // Checa colisão com o próprio corpo
+            if (cobra.some(segmento => segmento.x === novaCabeca.x && segmento.y === novaCabeca.y)) {
+                mostrarPopup(`☠️ Você mordeu a si mesmo! Fim de jogo.\nPontuação: ${cobra.length - 1}`);
+                jogoAtivo = false;
+                return;
+            }
+
+            // Movimenta a cobra
+            cobra.unshift(novaCabeca);
+
+            // Se comer a maçã, cresce e gera outra
+            if (novaCabeca.x === maca.x && novaCabeca.y === maca.y) {
+                maca = gerarMaca();
+            } else {
+                cobra.pop();
+            }
+
+            desenharCobra();
+            setTimeout(moverCobra, 250);
+        }
+
+        function mudarDirecao(tecla) {
+            if (tecla === 37 && direcao !== "direita") direcao = "esquerda";
+            if (tecla === 38 && direcao !== "baixo") direcao = "cima";
+            if (tecla === 39 && direcao !== "esquerda") direcao = "direita";
+            if (tecla === 40 && direcao !== "cima") direcao = "baixo";
+        }
+
+        // Função para exibir o popup de fim de jogo
+        function mostrarPopup(mensagem) {
+            document.getElementById("mensagemPopup").innerText = mensagem;
+            document.getElementById("popup").style.display = "block"; // Exibe o popup
+        }
+
+        // Função para reiniciar o jogo
+        function reiniciarJogo() {
+            cobra = [{ x: 5, y: 5 }];
+            direcao = "direita";
+            maca = gerarMaca();
+            jogoAtivo = true;
+            document.getElementById("popup").style.display = "none"; // Esconde o popup
+            criarTabuleiro();
+            desenharCobra();
+            moverCobra();
+        }
+
+        criarTabuleiro();
+        desenharCobra();
+        moverCobra();
+    </script>
+
+    <div style="text-align: center; font-size: 12px; font-weight: bolder;"> Developer: Kéure Passos Soares</div>
+</body>
+</html>
